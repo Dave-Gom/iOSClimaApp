@@ -7,18 +7,32 @@
 //
 
 import Foundation
+import CoreLocation
+
+protocol WeatherManagerDelegate {
+    func didUpdateWeather(_ weatherManager: WeatherManger, weather: WeatherModel) 
+    func didFailWithError(error: Error)
+}
+
 
 
 
 struct WeatherManger{
-    let weatherUrl = "https://api.openweathermap.org/data/2.5/weather?appid=082b0eae9345a5438336c6f4be284b72"
+    let weatherUrl = "https://api.openweathermap.org/data/2.5/weather?appid=082b0eae9345a5438336c6f4be284b72&units=metric"
+    
+    var delegate:WeatherManagerDelegate?
     
     func fetchWeather(cityName: String){
         let urlSting = "\(weatherUrl)&q=\(cityName)"
-        performRequest(stringUrl: urlSting)
+        performRequest(with: urlSting)
     }
     
-    func performRequest(stringUrl: String) -> Void {
+    func fetchWeather(lat: CLLocationDegrees, lon: CLLocationDegrees){
+        let urlSting = "\(weatherUrl)&lat=\(lat)&lon=\(lon)"
+        performRequest(with: urlSting)
+    }
+    
+    func performRequest(with stringUrl: String) -> Void {
         
         if let url = URL(string: stringUrl){
             let session = URLSession(configuration: .default)
@@ -26,15 +40,14 @@ struct WeatherManger{
             let task = session.dataTask(with: url) { data, response, error in
                 if error != nil{
                    
-                    print(error!)
+                    self.delegate?.didFailWithError(error: error!)
                     return
                 }
                 
                 if let safeData = data{
 
                     if let weather = self.parseJSON(weatherData: safeData){
-                        let weatherVC = WeatherViewController();
-                        weatherVC.didUpdateWeather(weather: weather)
+                        self.delegate?.didUpdateWeather(self, weather: weather)
                     }
                     
                     
@@ -60,7 +73,7 @@ struct WeatherManger{
             return weather;
         }
         catch{
-            print(error)
+            self.delegate?.didFailWithError(error: error)
             return nil
         }
         
